@@ -1,0 +1,7 @@
+#!/bin/sh
+
+BUILD_DIR="$1"
+
+test -e "$BUILD_DIR/app.lua" || exit 1
+
+echo 'Lua Event Machine'

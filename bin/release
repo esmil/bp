@@ -1,0 +1,8 @@
+#!/bin/sh
+
+BUILD_DIR="$1"
+
+cat <<EOF
+default_process_types:
+  web: ./lem app.lua
+EOF

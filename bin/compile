@@ -1,0 +1,48 @@
+#!/bin/sh
+
+BUILD_DIR="$1"
+CACHE_DIR="$2"
+START_DIR="`pwd`"
+
+version='master'
+test -r "$BUILD_DIR/lem-version" && version="`cat "$BUILD_DIR/lem-version"`"
+
+msg() {
+  echo "-----> $@"
+}
+
+mkdir -p "$CACHE_DIR"
+cd "$CACHE_DIR"
+cached=''
+test -r lem-version && cached="`cat lem-version`"
+
+if test "x$cached" != "x$version"; then
+  msg "Fetching $version"
+  rm -rf *
+  curl --progress -L "https://github.com/esmil/lem/archive/${version}.tar.gz" | tar xz
+  cd "lem-$version"
+
+  msg 'Configuring'
+  CFLAGS='-O2 -pipe -Wall -Wextra -Wno-pragmas' \
+    ./configure --prefix="$CACHE_DIR" --with-lua=builtin \
+      --with-cmoddir=/app/lib \
+      --with-lmoddir=/app/lib \
+      --bindir=/app
+
+  msg 'Compiling'
+  make -j`grep -c vendor_id /proc/cpuinfo` all strip
+  make DESTDIR="$CACHE_DIR" install
+
+  msg 'Cleanup'
+  cd "$CACHE_DIR"
+  mv ".$CACHE_DIR/include" .
+  mv ".$CACHE_DIR/lib" .
+  rm -rf "app/tmp"
+  rm -rf "lem-$version"
+  echo "$version" > lem-version
+fi
+
+msg 'Installing LEM'
+cp -r "$CACHE_DIR"/app/* "$BUILD_DIR"
+
+msg 'Done'
