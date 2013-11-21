@@ -4,15 +4,17 @@ BUILD_DIR="$1"
 CACHE_DIR="$2"
 START_DIR="`pwd`"
 
-version='master'
-test -r "$BUILD_DIR/lem-version" && version="`cat "$BUILD_DIR/lem-version"`"
-
 msg() {
   echo "-----> $@"
 }
 
+export PKG_CONFIG_PATH="/usr/lib/pkgconfig:$CACHE_DIR/lib/pkgconfig"
+
 mkdir -p "$CACHE_DIR"
 cd "$CACHE_DIR"
+
+version='master'
+test -r "$BUILD_DIR/lem-version" && version="`cat "$BUILD_DIR/lem-version"`"
 cached=''
 test -r lem-version && cached="`cat lem-version`"
 
@@ -42,7 +44,27 @@ if test "x$cached" != "x$version"; then
   echo "$version" > lem-version
 fi
 
-msg 'Installing LEM'
+version=''
+test -r "$BUILD_DIR/lem-postgres-version" && version="`cat "$BUILD_DIR/lem-postgres-version"`"
+cached=''
+test -r lem-postgres-version && cached="`cat lem-postgres-version`"
+
+if test "x$version" != 'x' -a "x$version" != "x$cached"; then
+  msg "Fetching lem-postgres $version"
+  curl --progress -L "https://github.com/esmil/lem-postgres/archive/${version}.tar.gz" | tar xz
+  cd "lem-postgres-$version"
+
+  msg 'Compiling'
+  make all strip
+  make DESTDIR="$CACHE_DIR" install
+
+  msg 'Cleanup'
+  cd "$CACHE_DIR"
+  rm -rf "lem-postgres-$version"
+  echo "$version" > lem-postgres-version
+fi
+
+msg 'Installing'
 cp -r "$CACHE_DIR"/app/* "$BUILD_DIR"
 
 msg 'Done'
